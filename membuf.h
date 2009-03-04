@@ -23,8 +23,10 @@
 #ifndef BINARYIO__BMEMSTREAM_H
 #define BINARYIO__BMEMSTREAM_H
 
+#include <stdexcept>
 #include <string.h>
 #include "binaryio.h"
+#include "detail.h"
 
 namespace binaryio
 {
@@ -71,9 +73,47 @@ namespace binaryio
 			return *this;
 		}
 		
-		operator (const unsigned char *) ()
+		operator const unsigned char * () const
 		{
-			return m_buffer.get();
+			return m_buffer->get();
+		}
+		
+		size_t size() const
+		{
+			return m_buffer->size();
+		}
+		
+		size_t capacity() const
+		{
+			return m_buffer->capacity();
+		}
+		
+		void reserve(size_t newsize)
+		{
+			buffer *b = new buffer(get(), size(), newsize);
+			m_buffer->deref();
+			m_buffer = b;
+		}
+		
+		const unsigned char *get() const
+		{
+			return m_buffer->get();
+		}
+		
+		unsigned char *get_mutable()
+		{
+			if(!m_buffer->unique())
+			{
+				buffer *b = new buffer(*m_buffer);
+				m_buffer->deref();
+				m_buffer = b;
+			}
+			return m_buffer->get_mutable();
+		}
+		
+		void set_size(size_t size)
+		{
+			m_buffer->set_size(size);
 		}
 	
 	private:
@@ -82,6 +122,7 @@ namespace binaryio
 		
 		class buffer
 		{
+		public:
 			buffer(const unsigned char *data, size_t size) :
 				m_refcount(1),
 				m_used(size),
@@ -89,6 +130,16 @@ namespace binaryio
 				m_data(NULL)
 			{
 				m_data = new unsigned char[size];
+				memcpy(m_data, data, size);
+			}
+			
+			buffer(const unsigned char *data, size_t size, size_t reserve) :
+				m_refcount(1),
+				m_used(size),
+				m_allocated(reserve),
+				m_data(NULL)
+			{
+				m_data = new unsigned char[reserve];
 				memcpy(m_data, data, size);
 			}
 			
@@ -102,7 +153,7 @@ namespace binaryio
 				memset(m_data, 0, size);
 			}
 			
-			buffer(const buffer &b)
+			buffer(const buffer &b) :
 				m_refcount(1),
 				m_used(b.m_used),
 				m_allocated(b.m_allocated),
@@ -129,12 +180,12 @@ namespace binaryio
 			
 			const unsigned char *get() const
 			{
-				return m_buffer;
+				return m_data;
 			}
 			
 			unsigned char *get_mutable()
 			{
-				return m_buffer;
+				return m_data;
 			}
 			
 			void set_size(size_t size)
@@ -164,12 +215,12 @@ namespace binaryio
 					if(m_refcount == 0)
 					{
 						should_delete = true;
-					}					}
+					}
 				}
 				
 				if(should_delete)
 				{
-					delete *this;
+					delete this;
 				}
 			}
 			void ref()

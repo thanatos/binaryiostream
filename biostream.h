@@ -23,6 +23,8 @@
 #ifndef BINARYIO__BIOSTREAM_H
 #define BINARYIO__BIOSTREAM_H
 
+#include <cassert>
+#include <climits>
 #include "binaryio.h"
 
 namespace binaryio
@@ -36,7 +38,7 @@ namespace binaryio
 		{
 		}
 	
-		bistream &operator >> (endianness &e)
+		bistream &operator >> (endian &e)
 		{
 			m_read_opts.endianness = e;
 			return *this;
@@ -90,19 +92,19 @@ namespace binaryio
 			{
 				for(i = 0; i < m_read_opts.size; ++i)
 				{
-					x |= data[i] << (CHAR_BITS * i);
+					x |= data[i] << (CHAR_BIT * i);
 				}
 			}
 			else if(m_read_opts.endianness == big_endian)
 			{
 				for(i = 0; i < m_read_opts.size; ++i)
 				{
-					x |= data[i] << (CHAR_BITS * (m_read_opts.size - i - 1));
+					x |= data[i] << (CHAR_BIT * (m_read_opts.size - i - 1));
 				}
 			}
 		}
 		
-		void read(unsigned char *buffer, size_t size)
+		bool read(unsigned char *buffer, size_t size)
 		{
 			int ret;
 			ret = stream()->read(buffer, size);
@@ -119,7 +121,7 @@ namespace binaryio
 			}
 			else // ret < 0  // An error occurred
 			{
-				m_bad_bit = true;
+				m_badbit = true;
 				return false;
 			}
 		}
@@ -152,7 +154,7 @@ namespace binaryio
 #ifndef NDEBUG
 			unsigned int mask =
 				UINT_MAX <<
-					(CHAR_BITS * (sizeof(unsigned int) - m_write_opts.size));
+					(CHAR_BIT * (sizeof(unsigned int) - m_write_opts.size));
 			assert((n & mask) == 0);
 #endif
 			
@@ -160,14 +162,14 @@ namespace binaryio
 			{
 				for(i = 0; i < m_write_opts.size; ++i)
 				{
-					data[i] = (n >> (CHAR_BITS * i)) & UCHAR_MAX;
+					data[i] = (n >> (CHAR_BIT * i)) & UCHAR_MAX;
 				}
 			}
 			else if(m_write_opts.endianness == big_endian)
 			{
 				for(i = 0; i < m_write_opts.size; ++i)
 				{
-					data[i] = (n >> (CHAR_BITS * (m_write_opts.size - i - 1)))
+					data[i] = (n >> (CHAR_BIT * (m_write_opts.size - i - 1)))
 						& UCHAR_MAX;
 				}
 			}

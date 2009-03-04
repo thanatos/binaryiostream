@@ -29,7 +29,9 @@
 #include <pthread.h>
 #endif
 
-namespace binaryio::detail
+namespace binaryio
+{
+namespace detail
 {
 #ifdef _WIN32
 	class mutex
@@ -40,9 +42,13 @@ namespace binaryio::detail
 	class mutex
 	{
 	public:
-		mutex() :
-			m_mutex(PTHREAD_MUTEX_INITIALIZER)
+		mutex()
 		{
+			pthread_mutex_init(&m_mutex, NULL);
+		}
+		~mutex()
+		{
+			pthread_mutex_destroy(&m_mutex);
 		}
 		
 		void lock()
@@ -78,6 +84,7 @@ namespace binaryio::detail
 	};
 	
 #endif
+}
 }
 
 #endif
