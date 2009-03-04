@@ -30,6 +30,12 @@ namespace binaryio
 	class bistream : virtual public bstream_base
 	{
 	public:
+		bistream(bstreambuf_base *stream) :
+			bstream_base(stream),
+			m_read_opts(u32le)
+		{
+		}
+	
 		bistream &operator >> (endianness &e)
 		{
 			m_read_opts.endianness = e;
@@ -124,6 +130,12 @@ namespace binaryio
 	class bostream : virtual public bstream_base
 	{
 	public:
+		bostream(bstreambuf_base *stream) :
+			bstream_base(stream),
+			m_write_opts(u32le)
+		{
+		}
+		
 		bostream &operator << (unsigned int n)
 		{
 			serialize(n);
@@ -143,6 +155,24 @@ namespace binaryio
 					(CHAR_BITS * (sizeof(unsigned int) - m_write_opts.size));
 			assert((n & mask) == 0);
 #endif
+			
+			if(m_write_opts.endianness == little_endian)
+			{
+				for(i = 0; i < m_write_opts.size; ++i)
+				{
+					data[i] = (n >> (CHAR_BITS * i)) & UCHAR_MAX;
+				}
+			}
+			else if(m_write_opts.endianness == big_endian)
+			{
+				for(i = 0; i < m_write_opts.size; ++i)
+				{
+					data[i] = (n >> (CHAR_BITS * (m_write_opts.size - i - 1)))
+						& UCHAR_MAX;
+				}
+			}
+			
+			write(data, m_write_opts.size);
 		}
 	
 		bool write(const unsigned char *buffer, size_t size)
@@ -166,6 +196,8 @@ namespace binaryio
 				return false;
 			}
 		}
+		
+		serialization_info m_write_opts;
 	};
 }
 
