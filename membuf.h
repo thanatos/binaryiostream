@@ -23,6 +23,7 @@
 #ifndef BINARYIO__BMEMSTREAM_H
 #define BINARYIO__BMEMSTREAM_H
 
+#include <algorithm>
 #include <stdexcept>
 #include <string.h>
 #include "binaryio.h"
@@ -135,12 +136,12 @@ namespace binaryio
 			
 			buffer(const unsigned char *data, size_t size, size_t reserve) :
 				m_refcount(1),
-				m_used(size),
+				m_used(std::min(size, reserve)),
 				m_allocated(reserve),
 				m_data(NULL)
 			{
 				m_data = new unsigned char[reserve];
-				memcpy(m_data, data, size);
+				memcpy(m_data, data, m_used);
 			}
 			
 			buffer(size_t size) :

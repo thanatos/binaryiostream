@@ -20,11 +20,19 @@
  * IN THE SOFTWARE.
  */
 
+/**
+ * Things we assume:
+ * 1) 2's complement signed integers.
+ * 2) IEEE 754 doubles & floats.
+ * 3) Probably that bytes are octects (CHAR_BIT == 8)
+ */
+
 #ifndef BINARYIO__BIOSTREAM_H
 #define BINARYIO__BIOSTREAM_H
 
 #include <cassert>
 #include <climits>
+#include <streambuf>
 #include "binaryio.h"
 
 namespace binaryio
@@ -32,7 +40,7 @@ namespace binaryio
 	class bistream : virtual public bstream_base
 	{
 	public:
-		bistream(bstreambuf_base *stream) :
+		bistream(std::streambuf *stream) :
 			bstream_base(stream),
 			m_read_opts(u32le)
 		{
@@ -106,24 +114,15 @@ namespace binaryio
 		
 		bool read(unsigned char *buffer, size_t size)
 		{
-			int ret;
-			ret = stream()->read(buffer, size);
+			size_t ret;
+			ret = stream()->sgetn(reinterpret_cast<char *>(buffer), size);
 			if(ret == size)
 			{
 				return true;
 			}
-			else if(ret >= 0)
-			{
-				// Either EOF, or partial read,
-				// which we count as EOF.
-				m_eof = true;
-				return false;
-			}
-			else // ret < 0  // An error occurred
-			{
-				m_badbit = true;
-				return false;
-			}
+			// We hit EOF
+			m_eof = true;
+			return false;
 		}
 		
 		serialization_info m_read_opts;
@@ -132,15 +131,37 @@ namespace binaryio
 	class bostream : virtual public bstream_base
 	{
 	public:
-		bostream(bstreambuf_base *stream) :
+		bostream(std::streambuf *stream) :
 			bstream_base(stream),
 			m_write_opts(u32le)
 		{
 		}
 		
+		bostream &operator << (const serialization_info &si)
+		{
+			m_write_opts = si;
+			return *this;
+		}
+		
 		bostream &operator << (unsigned int n)
 		{
 			serialize(n);
+			return *this;
+		}
+		
+		bostream &operator << (const char *str)
+		{
+			size_t len = strlen(str);
+			serialize(len);
+			write(reinterpret_cast<const unsigned char *>(str), len);
+			return *this;
+		}
+		
+		bostream &operator << (const std::string &str)
+		{
+			size_t len = str.size();
+			serialize(len);
+			write(reinterpret_cast<const unsigned char *>(str.c_str()), len);
 			return *this;
 		}
 		
@@ -152,9 +173,15 @@ namespace binaryio
 			
 			// Can we fit n in the size requested by the user?
 #ifndef NDEBUG
-			unsigned int mask =
-				UINT_MAX <<
-					(CHAR_BIT * (sizeof(unsigned int) - m_write_opts.size));
+			unsigned int mask;
+			if(m_write_opts.size >= sizeof(unsigned int))
+			{
+				mask = 0;
+			}
+			else
+			{
+				mask = UINT_MAX << (CHAR_BIT * m_write_opts.size);
+			}
 			assert((n & mask) == 0);
 #endif
 			
@@ -179,24 +206,15 @@ namespace binaryio
 	
 		bool write(const unsigned char *buffer, size_t size)
 		{
-			int ret;
-			ret = stream()->write(buffer, size);
+			size_t ret;
+			ret = stream()->sputn(reinterpret_cast<const char *>(buffer), size);
 			if(ret == size)
 			{
 				return true;
 			}
-			else if(ret >= 0)
-			{
-				// Either EOF, or partial write,
-				// we we count as EOF.
-				m_eof = true;
-				return false;
-			}
-			else // ret < 0	 // An error occurred
-			{
-				m_badbit = true;
-				return false;
-			}
+			// Otherwise, we've hit an EOF:
+			m_eof = true;
+			return false;
 		}
 		
 		serialization_info m_write_opts;

@@ -20,71 +20,26 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef BINARYIO__DETAIL_H
-#define BINARYIO__DETAIL_H
+#ifndef BINARYIO__BMEMSTREAM_H
+#define BINARYIO__BMEMSTREAM_H
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <pthread.h>
-#endif
+#include <streambuf>
 
 namespace binaryio
 {
-namespace detail
-{
-#ifdef _WIN32
-	class mutex
-	{
-	};
-#else
-	// Use POSIX threads
-	class mutex
+	class memstream_buf : public std::streambuf
 	{
 	public:
-		mutex()
+		virtual ~memstream_buf()
 		{
-			pthread_mutex_init(&m_mutex, NULL);
 		}
-		~mutex()
-		{
-			pthread_mutex_destroy(&m_mutex);
-		}
-		
-		void lock()
-		{
-			pthread_mutex_lock(&m_mutex);
-		}
-		
-		void unlock()
-		{
-			pthread_mutex_unlock(&m_mutex);
-		}
-		
-	private:
-		pthread_mutex_t m_mutex;
-	};
 	
-	class lock
-	{
-	public:
-		lock(mutex &m) :
-			m_mutex(m)
-		{
-			m_mutex.lock();
-		}
-		
-		~lock()
-		{
-			m_mutex.unlock();
-		}
-		
-	private:
-		mutex &m_mutex;
-	};
+		virtual int read
 	
-#endif
-}
+	private:
+		membuf m_buffer;
+		size_t 
+	};
 }
 
 #endif

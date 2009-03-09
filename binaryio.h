@@ -20,15 +20,11 @@
  * IN THE SOFTWARE.
  */
 
-/**
- * Things we assume:
- * 1) 2's complement signed integers.
- * 2) IEEE 754 doubles & floats.
- * 3) Probably that bytes are octects (CHAR_BIT == 8)
- */
-
 #ifndef BINARYIO_H__
 #define BINARYIO_H__
+
+#include <streambuf>
+#include <stdexcept>
 
 namespace binaryio
 {
@@ -37,12 +33,33 @@ namespace binaryio
 		big_endian,
 		little_endian,
 	};
+	
+	inline endian native_endian()
+	{
+		unsigned char bytes[] = {0xAA, 0xBB, 0xCC, 0xDD};
+		unsigned int *num = reinterpret_cast<unsigned int *>(bytes);
+		
+		if(num == 0xAABBCCDD)
+		{
+			return big_endian;
+		}
+		else if(num == 0xDDCCBBAA)
+		{
+			return little_endian;
+		}
+		
+		throw std::runtime_error("Unable to determine endianness!");
+	}
 
-	class io_error
+	class io_error : public std::exception
 	{
 	public:
 		io_error(const std::string &what) :
 			m_message(what)
+		{
+		}
+		
+		~io_error() throw()
 		{
 		}
 
@@ -66,6 +83,8 @@ namespace binaryio
 		endian endianness;
 	};
 	
+	const size_t VARIABLE_SIZE = 0;
+	
 	// Fixed length serializers
 	const serialization_info u8(1, little_endian);
 	const serialization_info u16le(2, little_endian);
@@ -76,31 +95,12 @@ namespace binaryio
 	const serialization_info u64be(8, big_endian);
 	
 	// Variable length serializers
-	const serialization_info variable_le(0, little_endian);
-	const serialization_info variable_be(0, big_endian);
-	
-	class bstreambuf_base
-	{
-	public:
-		virtual ~bstreambuf_base()
-		{
-		}
-	
-		/**
-		 * Reads in size bytes from the stream, storing them in buffer.
-		 * Returns the number of characters read on completion.
-		 * If EOF is encountered, returns 0.
-		 * If an error occurs, <0 is returned.
-		 */
-		virtual int read(unsigned char *buffer, size_t size);
-		virtual int write(const unsigned char *buffer, size_t size);
-		virtual int peek(unsigned char *buffer, size_t size);
-	};
+	const serialization_info variable_le(VARIABLE_SIZE, little_endian);
 	
 	class bstream_base
 	{
 	public:
-		bstream_base(bstreambuf_base *stream) :
+		bstream_base(std::streambuf *stream) :
 			m_eof(false),
 			m_failbit(false),
 			m_badbit(false),
@@ -130,7 +130,7 @@ namespace binaryio
 		}
 		
 	protected:
-		bstreambuf_base *stream()
+		std::streambuf *stream()
 		{
 			return m_stream;
 		}
@@ -140,7 +140,7 @@ namespace binaryio
 		bool m_badbit;
 		
 	private:
-		bstreambuf_base *m_stream;
+		std::streambuf *m_stream;
 	};
 }
 
