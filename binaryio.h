@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef BINARYIO__BIO_BASE_H
-#define BINARYIO__BIO_BASE_H
+#ifndef BINARYIO_H__
+#define BINARYIO_H__
 
 #include <streambuf>
 #include <stdexcept>
@@ -39,11 +39,11 @@ namespace binaryio
 		unsigned char bytes[] = {0xAA, 0xBB, 0xCC, 0xDD};
 		unsigned int *num = reinterpret_cast<unsigned int *>(bytes);
 		
-		if(*num == 0xAABBCCDD)
+		if(num == 0xAABBCCDD)
 		{
 			return big_endian;
 		}
-		else if(*num == 0xDDCCBBAA)
+		else if(num == 0xDDCCBBAA)
 		{
 			return little_endian;
 		}
@@ -100,10 +100,14 @@ namespace binaryio
 	class bstream_base
 	{
 	public:
-		virtual ~bstream_base()
+		bstream_base(std::streambuf *stream) :
+			m_eof(false),
+			m_failbit(false),
+			m_badbit(false),
+			m_stream(stream)
 		{
 		}
-		
+	
 		bool good() const
 		{
 			return !m_eof && !m_failbit && !m_badbit;
@@ -126,19 +130,6 @@ namespace binaryio
 		}
 		
 	protected:
-		bstream_base(std::streambuf *stream = NULL) :
-			m_eof(false),
-			m_failbit(false),
-			m_badbit(false),
-			m_stream(stream)
-		{
-		}
-
-		void init(std::streambuf *buf)
-		{
-			m_stream = buf;
-		}
-
 		std::streambuf *stream()
 		{
 			return m_stream;
@@ -152,6 +143,9 @@ namespace binaryio
 		std::streambuf *m_stream;
 	};
 }
+
+#include "biostream.h"
+#include "membuf.h"
 
 #endif
 
