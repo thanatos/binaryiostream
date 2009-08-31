@@ -25,6 +25,7 @@
 
 #include <cassert>
 #include <climits>
+#include <cstring>
 #include <streambuf>
 #include <limits>
 #include "bio_base.h"
